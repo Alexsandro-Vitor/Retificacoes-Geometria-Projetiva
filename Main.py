@@ -129,10 +129,17 @@ def ret_retas_ortogonais_2(retas):
 						[s[3], s[4], s[5]]])
 	print("Conica:")
 	print(conica)
-	(u, _, _) = svd(conica)
-	print("Retificacao:")
-	print(u)
-	return u
+	(u, d, _) = svd(conica)
+	print("Transformacao:")
+	mD = np.array([[sqrt(d[0]), 0, 0], [0, sqrt(d[1]), 0], [0, 0, 1]])
+	saida = np.dot(u, mD)
+	print(saida)
+	print("Conica reconstruida:")
+	temp = np.zeros((3,3))
+	temp[0,0] = 1
+	temp[1,1] = 1
+	print(np.dot(np.dot(saida, temp), np.transpose(saida)))
+	return inv(saida)
 	
 def normalizar(ponto):
 	'''
