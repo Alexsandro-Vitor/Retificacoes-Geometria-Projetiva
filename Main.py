@@ -1,6 +1,7 @@
 import numpy as np
-from numpy.linalg import inv, det
+from numpy.linalg import inv, det, svd
 import cv2
+from math import sqrt
 from tkinter.filedialog import askopenfilename
 
 def ajustar_imagem(img):
@@ -35,8 +36,6 @@ def ret_afim_4_pontos(ponto1, ponto2, ponto3, ponto4):
 				[ponto4[0], ponto4[1], 1, 0, 0, 0, 0, 0, 0],
 				[0, 0, 0, 0, 0, 0, 0, 0, 1]])
 	detA = det(a)
-	# print("Determinante de a =", detA)
-	# print(a)
 	t = np.zeros((3, 3))
 	res = np.array([0, 0, 0, 0, 0, 0, 0, 0, 1])
 	for i in range(9):
@@ -47,10 +46,6 @@ def ret_afim_4_pontos(ponto1, ponto2, ponto3, ponto4):
 		# print("Determinante", i, "=", det(aI))
 	print("Retificacao:")
 	print(t)
-	# print(np.dot(t, np.array([ponto1[0], ponto1[1], 1])))
-	# print(np.dot(t, np.array([ponto2[0], ponto2[1], 1])))
-	# print(np.dot(t, np.array([ponto3[0], ponto3[1], 1])))
-	# print(np.dot(t, np.array([ponto4[0], ponto4[1], 1])))
 	return t
 
 def ret_afim_reta_inf(reta):
@@ -65,6 +60,82 @@ def ret_afim_reta_inf(reta):
 	#print(np.dot(inv(np.transpose(t)), reta))
 	return t
 
+def ret_retas_ortogonais(linL1, linM1, linL2, linM2):
+	print(linL1, linM1, linL2, linM2)
+	linL1 = normalizar(linL1)
+	linM1 = normalizar(linM1)
+	linL2 = normalizar(linL2)
+	linM2 = normalizar(linM2)
+	print(linL1, linM1, linL2, linM2)
+	m = np.array(
+		[[linL1[0]*linM1[0], linL1[0]*linM1[1] + linL1[1]*linM1[0], linL1[1]*linM1[1]],
+		[linL2[0]*linM2[0], linL2[0]*linM2[1] + linL2[1]*linM2[0], linL2[1]*linM2[1]],
+		[0, 0, 1]])
+	detM = det(m)
+	print("Determinante de m", detM)
+	s = np.zeros(3)
+	res = np.array([0, 0, 1])
+	for i in range(3):
+		mI = np.copy(m)
+		mI[:,i] = res
+		print("Determinante", i, det(mI))
+		s[i] = det(mI) / detM
+	conica = np.array([[s[0], s[1], 0],
+						[s[1], s[2], 0],
+						[0, 0, 0]])
+	print("Conica:")
+	print(conica)
+	(u, d, _) = svd(conica)
+	print("Retificacao:")
+	print(u)
+	print("Transformacao:")
+	mD = np.array([[sqrt(d[0]), 0, 0], [0, sqrt(d[1]), 0], [0, 0, 1]])
+	print(np.dot(u, mD))
+	temp = np.zeros((3,3))
+	temp[0,0] = 1
+	temp[1,1] = 1
+	print(np.dot(np.dot(np.dot(u, mD), temp), np.transpose(np.dot(u, mD))))
+	return np.dot(u, mD)
+
+def ret_retas_ortogonais_2(retas):
+	#(l1m1, (l1m2 + l2m1)/2, l2m2, (l1m3 + l3m1)/2, (l2m3 + l3m2)/2, l3m3) c = 0
+	print(retas)
+	linL1 = normalizar(retas[0])
+	linM1 = normalizar(retas[1])
+	linL2 = normalizar(retas[2])
+	linM2 = normalizar(retas[3])
+	linL3 = normalizar(retas[4])
+	linM3 = normalizar(retas[5])
+	linL4 = normalizar(retas[6])
+	linM4 = normalizar(retas[7])
+	linL5 = normalizar(retas[8])
+	linM5 = normalizar(retas[9])
+	print(linL1, linM1, linL2, linM2, linL3, linM3)
+	m = np.array([[linL1[0]*linM1[0], (linL1[0]*linM1[1] + linL1[1]*linM1[0])/2, linL1[1]*linM1[1], (linL1[0]*linM1[2] + linL1[2]*linM1[0])/2, (linL1[1]*linM1[2] + linL1[2]*linM1[1])/2, linL1[2]*linM1[2]],
+				[linL2[0]*linM2[0], (linL2[0]*linM2[1] + linL2[1]*linM2[0])/2, linL2[1]*linM2[1], (linL2[0]*linM2[2] + linL2[2]*linM2[0])/2, (linL2[1]*linM2[2] + linL2[2]*linM2[1])/2, linL2[2]*linM2[2]],
+				[linL3[0]*linM3[0], (linL3[0]*linM3[1] + linL3[1]*linM3[0])/2, linL3[1]*linM3[1], (linL3[0]*linM3[2] + linL3[2]*linM3[0])/2, (linL3[1]*linM3[2] + linL3[2]*linM3[1])/2, linL3[2]*linM3[2]],
+				[linL4[0]*linM4[0], (linL4[0]*linM4[1] + linL4[1]*linM4[0])/2, linL4[1]*linM4[1], (linL4[0]*linM4[2] + linL4[2]*linM4[0])/2, (linL4[1]*linM4[2] + linL4[2]*linM4[1])/2, linL4[2]*linM4[2]],
+				[linL5[0]*linM5[0], (linL5[0]*linM5[1] + linL5[1]*linM5[0])/2, linL5[1]*linM5[1], (linL5[0]*linM5[2] + linL5[2]*linM5[0])/2, (linL5[1]*linM5[2] + linL5[2]*linM5[1])/2, linL5[2]*linM5[2]],
+				[0, 0, 0, 0, 0, 1]])
+	detM = det(m)
+	print("Determinante de m", detM)
+	s = np.zeros(6)
+	res = np.array([0, 0, 0, 0, 0, 1])
+	for i in range(6):
+		mI = np.copy(m)
+		mI[:,i] = res
+		print("Determinante", i, det(mI))
+		s[i] = det(mI) / detM
+	conica = np.array([[s[0], s[1], s[3]],
+						[s[1], s[2], s[4]],
+						[s[3], s[4], s[5]]])
+	print("Conica:")
+	print(conica)
+	(u, _, _) = svd(conica)
+	print("Retificacao:")
+	print(u)
+	return u
+	
 def normalizar(ponto):
 	'''
 	Deixa o vetor homogeneo com z = 1
@@ -131,14 +202,15 @@ while (1):
 	print("Escolha uma opcao:")
 	print("1 - Retificacao afim com 4 pontos")
 	print("2 - Retificacao afim com a reta do infinito")
-	print("5 - Retificacao metrica")
+	print("3 - Retificacao com dois pares de retas paralelas")
+	print("4 - Retificacao com cinco pares de retas paralelas")
 	print("0 - Sair")
 	opcao = int(input())
 	if opcao == 0:
 		break
 	else:
+		img = transposta(img)
 		if opcao == 1:
-			img = transposta(img)
 			dummy = img.copy()
 			pontos = []
 			def choose_points(event,x,y,flags,param):
@@ -159,34 +231,74 @@ while (1):
 				k = cv2.waitKey(1) & 0xFF
 				if k == 27:
 					break
-			img = transposta(dummy.copy())
 			t = ret_afim_4_pontos(pontos[0], pontos[1], pontos[2], pontos[3])
-			
-			print("Insira os parametros dos pontos")
-			# x1 = float(input("x1 = "))
-			# y1 = float(input("y1 = "))
-			# x2 = float(input("x2 = "))
-			# y2 = float(input("y2 = "))
-			# x3 = float(input("x3 = "))
-			# y3 = float(input("y3 = "))
-			# x4 = float(input("x4 = "))
-			# y4 = float(input("y4 = "))
-			# t = ret_afim_4_pontos([x1, y1], [x2, y2], [x3, y3], [x4, y4])
 		elif opcao == 2:
 			print("Insira os parametros da reta")
 			xReta = float(input())
 			yReta = float(input())
 			zReta = float(input())
 			t = ret_afim_reta_inf(np.array([xReta, yReta, zReta]))
-		elif opcao == 5:
-			print("Insira")
+		elif opcao == 3:
+			dummy = img.copy()
+			pontos = []
+			retas = []
+			def choose_points(event,x,y,flags,param):
+				global pontos, retas, dummy
+				if len(retas) < 4:
+					if event == cv2.EVENT_LBUTTONDBLCLK:
+						if len(pontos):
+							cv2.line(img,(pontos[0][0],pontos[0][1]),(x,y),(255,0,0),2)
+						pontos.append(np.array([x, y, 1], dtype=np.float32))
+						cv2.circle(img,(x,y),5,(0,0,255),-1)
+						if len(pontos) == 3:
+							print(pontos[0], pontos[1], pontos[2])
+							retas.append(np.cross(pontos[0], pontos[1]))
+							retas.append(np.cross(pontos[0], pontos[2]))
+							pontos = []
+			cv2.namedWindow("Antiga")
+			cv2.setMouseCallback("Antiga",choose_points)
+			print("Evento clique = ", cv2.EVENT_LBUTTONDBLCLK)
+			while (1):
+				cv2.imshow("Antiga", img)
+				k = cv2.waitKey(1) & 0xFF
+				if k == 27:
+					break
+			t = ret_retas_ortogonais(retas[0], retas[1], retas[2], retas[3])
+		elif opcao == 4:
+			dummy = img.copy()
+			pontos = []
+			retas = []
+			def choose_points(event,x,y,flags,param):
+				global pontos, retas, dummy
+				if len(retas) < 10:
+					if event == cv2.EVENT_LBUTTONDBLCLK:
+						if len(pontos):
+							cv2.line(img,(pontos[0][0],pontos[0][1]),(x,y),(255,0,0),2)
+						pontos.append(np.array([x, y, 1], dtype=np.float32))
+						cv2.circle(img,(x,y),5,(0,0,255),-1)
+						if len(pontos) == 3:
+							print(pontos[0], pontos[1], pontos[2])
+							retas.append(np.cross(pontos[0], pontos[1]))
+							retas.append(np.cross(pontos[0], pontos[2]))
+							pontos = []
+			cv2.namedWindow("Antiga")
+			cv2.setMouseCallback("Antiga",choose_points)
+			print("Evento clique = ", cv2.EVENT_LBUTTONDBLCLK)
+			while (1):
+				cv2.imshow("Antiga", img)
+				k = cv2.waitKey(1) & 0xFF
+				if k == 27:
+					break
+			t = ret_retas_ortogonais_2(retas)
 		else:
 			print("Opcao invalida")
+			img = transposta(dummy.copy())
 			continue
+		img = transposta(dummy.copy())
 		boundBox = get_bounding_box(t, columns, rows)
 		print("BOUNDING BOX:")
 		print(boundBox)
-		larguraMax = 800
+		larguraMax = 1000
 		alturaMax = 600
 		largura, altura, escala = novas_dimensoes(boundBox, larguraMax, alturaMax)
 		print("LARGURA, ALTURA, ESCALA")
@@ -202,8 +314,3 @@ while (1):
 		cv2.imshow("Nova imagem", transposta(novaImg))
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
-
-ret_afim_4_pontos([100,100], [0,100], [0,0], [100,0])
-
-ret_afim_reta_inf(np.array([2, 4, 5]))
-
