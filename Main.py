@@ -72,13 +72,11 @@ def ret_retas_ortogonais(linL1, linM1, linL2, linM2):
 		[linL2[0]*linM2[0], linL2[0]*linM2[1] + linL2[1]*linM2[0], linL2[1]*linM2[1]],
 		[0, 0, 1]])
 	detM = det(m)
-	print("Determinante de m", detM)
 	s = np.zeros(3)
 	res = np.array([0, 0, 1])
 	for i in range(3):
 		mI = np.copy(m)
 		mI[:,i] = res
-		print("Determinante", i, det(mI))
 		s[i] = det(mI) / detM
 	conica = np.array([[s[0], s[1], 0],
 						[s[1], s[2], 0],
@@ -86,16 +84,16 @@ def ret_retas_ortogonais(linL1, linM1, linL2, linM2):
 	print("Conica:")
 	print(conica)
 	(u, d, _) = svd(conica)
-	print("Retificacao:")
-	print(u)
 	print("Transformacao:")
 	mD = np.array([[sqrt(d[0]), 0, 0], [0, sqrt(d[1]), 0], [0, 0, 1]])
-	print(np.dot(u, mD))
+	saida = np.dot(u, mD)
+	print(saida)
+	print("Conica reconstruida:")
 	temp = np.zeros((3,3))
 	temp[0,0] = 1
 	temp[1,1] = 1
-	print(np.dot(np.dot(np.dot(u, mD), temp), np.transpose(np.dot(u, mD))))
-	return np.dot(u, mD)
+	print(np.dot(np.dot(saida, temp), np.transpose(saida)))
+	return inv(saida)
 
 def ret_retas_ortogonais_2(retas):
 	#(l1m1, (l1m2 + l2m1)/2, l2m2, (l1m3 + l3m1)/2, (l2m3 + l3m2)/2, l3m3) c = 0
@@ -202,8 +200,8 @@ while (1):
 	print("Escolha uma opcao:")
 	print("1 - Retificacao afim com 4 pontos")
 	print("2 - Retificacao afim com a reta do infinito")
-	print("3 - Retificacao com dois pares de retas paralelas")
-	print("4 - Retificacao com cinco pares de retas paralelas")
+	print("3 - Retificacao metrica com dois pares de retas ortogonais")
+	print("4 - Retificacao com cinco pares de retas ortogonais")
 	print("0 - Sair")
 	opcao = int(input())
 	if opcao == 0:
