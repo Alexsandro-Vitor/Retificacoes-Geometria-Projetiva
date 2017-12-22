@@ -205,10 +205,11 @@ img = ajustar_imagem(img)
 (columns, rows, _) = img.shape
 while (1):
 	print("Escolha uma opcao:")
-	print("1 - Retificacao afim com 4 pontos")
-	print("2 - Retificacao afim com a reta do infinito")
-	print("3 - Retificacao metrica com dois pares de retas ortogonais")
-	print("4 - Retificacao com cinco pares de retas ortogonais")
+	print("1 - Retificacao com 4 pontos")
+	print("2 - Retificacao com a reta do infinito")
+	print("3 - Retificacao com dois pares de retas paralelas")
+	print("4 - Retificacao com dois pares de retas ortogonais")
+	print("5 - Retificacao com cinco pares de retas ortogonais")
 	print("0 - Sair")
 	opcao = int(input())
 	if opcao == 0:
@@ -219,7 +220,7 @@ while (1):
 			dummy = img.copy()
 			pontos = []
 			def choose_points(event,x,y,flags,param):
-				global pontos, dummy
+				global pontos
 				if len(pontos) < 4:
 					if event == cv2.EVENT_LBUTTONDBLCLK:
 						if len(pontos):
@@ -230,7 +231,6 @@ while (1):
 							cv2.line(img,(pontos[0][0],pontos[0][1]),(pontos[-1][0],pontos[-1][1]),(255,0,0),2)
 			cv2.namedWindow("Antiga")
 			cv2.setMouseCallback("Antiga",choose_points)
-			print("Evento clique = ", cv2.EVENT_LBUTTONDBLCLK)
 			while (1):
 				cv2.imshow("Antiga", img)
 				k = cv2.waitKey(1) & 0xFF
@@ -248,7 +248,31 @@ while (1):
 			pontos = []
 			retas = []
 			def choose_points(event,x,y,flags,param):
-				global pontos, retas, dummy
+				global pontos, retas
+				if len(pontos) < 4:
+					if event == cv2.EVENT_LBUTTONDBLCLK:
+						if len(pontos) % 2:
+							cv2.line(img,(pontos[-1][0],pontos[-1][1]),(x,y),(255,0,0),2)
+							retas.append(np.cross(pontos[-1], [x,y,1]))
+						if len(pontos) >= 2:
+							cv2.line(img,(pontos[len(pontos)-2][0],pontos[len(pontos)-2][1]),(x,y),(0,255,0),2)
+							retas.append(np.cross(pontos[len(pontos)-2], [x,y,1]))
+						pontos.append(np.array([x,y,1], dtype=np.float32))
+						cv2.circle(img,(x,y),5,(0,0,255),-1)
+			cv2.namedWindow("Antiga")
+			cv2.setMouseCallback("Antiga",choose_points)
+			while (1):
+				cv2.imshow("Antiga", img)
+				k = cv2.waitKey(1) & 0xFF
+				if k == 27:
+					break
+			t = ret_afim_reta_inf(np.cross(np.cross(retas[0], retas[2]), np.cross(retas[1], retas[3])))
+		elif opcao == 4:
+			dummy = img.copy()
+			pontos = []
+			retas = []
+			def choose_points(event,x,y,flags,param):
+				global pontos, retas
 				if len(retas) < 4:
 					if event == cv2.EVENT_LBUTTONDBLCLK:
 						if len(pontos):
@@ -262,19 +286,18 @@ while (1):
 							pontos = []
 			cv2.namedWindow("Antiga")
 			cv2.setMouseCallback("Antiga",choose_points)
-			print("Evento clique = ", cv2.EVENT_LBUTTONDBLCLK)
 			while (1):
 				cv2.imshow("Antiga", img)
 				k = cv2.waitKey(1) & 0xFF
 				if k == 27:
 					break
 			t = ret_retas_ortogonais(retas[0], retas[1], retas[2], retas[3])
-		elif opcao == 4:
+		elif opcao == 5:
 			dummy = img.copy()
 			pontos = []
 			retas = []
 			def choose_points(event,x,y,flags,param):
-				global pontos, retas, dummy
+				global pontos, retas
 				if len(retas) < 10:
 					if event == cv2.EVENT_LBUTTONDBLCLK:
 						if len(pontos):
@@ -288,7 +311,6 @@ while (1):
 							pontos = []
 			cv2.namedWindow("Antiga")
 			cv2.setMouseCallback("Antiga",choose_points)
-			print("Evento clique = ", cv2.EVENT_LBUTTONDBLCLK)
 			while (1):
 				cv2.imshow("Antiga", img)
 				k = cv2.waitKey(1) & 0xFF
