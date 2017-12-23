@@ -10,6 +10,7 @@ from numpy import array, zeros, cross, copy, dot, transpose, uint8, float32
 #svd: Algoritmo SVD
 from numpy.linalg import inv, det, svd
 #imread: Leitura da imagem
+#imwrite: Salva a imagem
 #split: Divisao das cores da imagem
 #merge: Juncao das cores da imagem
 #EVENT_LBUTTONDBLCLK: Duplo clique com botao esquerdo do mouse
@@ -18,12 +19,15 @@ from numpy.linalg import inv, det, svd
 #imshow: Exibe a imagem
 #waitKey: Recebe entradas do teclado
 #destroyAllWindows: Fecha todas as janelas
-from cv2 import imread, split, merge, EVENT_LBUTTONDBLCLK, line, circle, namedWindow, setMouseCallback, imshow, waitKey, destroyAllWindows
+from cv2 import imread, imwrite, split, merge, EVENT_LBUTTONDBLCLK, line, circle, namedWindow, setMouseCallback, imshow, waitKey, destroyAllWindows
 from math import sqrt
 #Leitura de arquivos
 from tkinter.filedialog import askopenfilename
 
 def ajustar_imagem(img):
+	'''
+	Adiciona uma moldura na imagem para ela nao sair do boundBox e reordena as coordenadas da imagem.
+	'''
 	(lin, col, _) = img.shape
 	moldura = zeros((lin+2, col+2, 3), dtype=uint8)
 	moldura[1:-1, 1:-1, :] = img[:, :, :]
@@ -34,6 +38,9 @@ def ajustar_imagem(img):
 	return merge((b,g,r))
 
 def transposta(img):
+	'''
+	Similar ao ajustar_imagem, porem sem a moldura. Usado para visualizacao.
+	'''
 	b,g,r = split(img)
 	b = transpose(b)
 	g = transpose(g)
@@ -41,6 +48,9 @@ def transposta(img):
 	return merge((b,g,r))
 	
 def ret_afim_4_pontos(ponto1, ponto2, ponto3, ponto4):
+	'''
+	Produz uma retificacao que transforma 4 pontos em vertices de um quadrado.
+	'''
 	#novos pontos
 	#x1' = (0, 0)	x2' = (1, 0)	x3' = (1, 1)	x4' = (0, 1)
 	a = array([[0, 0, 0, -ponto1[0], -ponto1[1], -1, 0, 0, 0],
@@ -66,24 +76,25 @@ def ret_afim_4_pontos(ponto1, ponto2, ponto3, ponto4):
 	return t
 
 def ret_afim_reta_inf(reta):
+	'''
+	Produz uma retificacao que leva uma reta ao infinito.
+	'''
 	t = zeros((3, 3))
 	t[0,0] = 1
 	t[1,1] = 1
 	t[2] = copy(reta)
 	print("Retificacao:")
 	print(t)
-	#print(inv(transpose(t)))
-	#print(dot(transpose(t), inv(transpose(t))))
-	#print(dot(inv(transpose(t)), reta))
 	return t
 
 def ret_retas_ortogonais(linL1, linM1, linL2, linM2):
-	print(linL1, linM1, linL2, linM2)
+	'''
+	Produz uma transformacao que torna dois pares de retas ortogonais. Usado apenas em imagens que já passaram por uma retificacao afim.
+	'''
 	linL1 = normalizar(linL1)
 	linM1 = normalizar(linM1)
 	linL2 = normalizar(linL2)
 	linM2 = normalizar(linM2)
-	print(linL1, linM1, linL2, linM2)
 	m = array(
 		[[linL1[0]*linM1[0], linL1[0]*linM1[1] + linL1[1]*linM1[0], linL1[1]*linM1[1]],
 		[linL2[0]*linM2[0], linL2[0]*linM2[1] + linL2[1]*linM2[0], linL2[1]*linM2[1]],
@@ -109,10 +120,13 @@ def ret_retas_ortogonais(linL1, linM1, linL2, linM2):
 	temp = zeros((3,3))
 	temp[0,0] = 1
 	temp[1,1] = 1
-	print(dot(dot(saida, temp), transpose(saida)))
+	print(dot(dot(saida, temp), transpose(saida)))	#Checando se a transformacao esta de acordo com a equacao do livro
 	return inv(saida)
 
 def ret_retas_ortogonais_2(retas):
+	'''
+	Produz uma transformacao que torna 5 pares de retas ortogonais.
+	'''
 	#(l1m1, (l1m2 + l2m1)/2, l2m2, (l1m3 + l3m1)/2, (l2m3 + l3m2)/2, l3m3) c = 0
 	print(retas)
 	linL1 = normalizar(retas[0])
@@ -168,6 +182,9 @@ def normalizar(ponto):
 	return ponto
 
 def get_bounding_box(t, columns, rows):
+	'''
+	Obtem os limites minimo e maximo de cada coordenada da imagem.
+	'''
 	ponto1 = normalizar(dot(t, transpose(array([0, 0, 1]))))
 	ponto2 = normalizar(dot(t, transpose(array([columns-1, 0, 1]))))
 	ponto3 = normalizar(dot(t, transpose(array([columns-1, rows-1, 1]))))
@@ -179,12 +196,18 @@ def get_bounding_box(t, columns, rows):
 	return (maxX, minX, maxY, minY)
 	
 def novas_dimensoes(boundBox, larguraMax, alturaMax):
+	'''
+	Obtem as dimensoes que a imagem transformada tera.
+	'''
 	(maxX, minX, maxY, minY) = boundBox
 	escala = min(larguraMax / (maxX - minX), alturaMax / (maxY - minY))
 	return ((maxX - minX) * escala, (maxY - minY) * escala, escala)
 
 def transf_escala_translacao(boundBox, escala):
-	(maxX, minX, maxY, minY) = boundBox
+	'''
+	Gera a matriz que redimensiona e translada a imagem para excaixa-la no boundBox.
+	'''
+	(_, minX, _, minY) = boundBox
 	t = zeros((3, 3))
 	t[2,2] = 1
 	#Escala
@@ -193,13 +216,14 @@ def transf_escala_translacao(boundBox, escala):
 	#Translacao
 	t[0,2] = -minX*escala
 	t[1,2] = -minY*escala
-	#print(dot(t, array([minY, minX, 1])))
-	#print(dot(t, array([maxY, maxX, 1])))
 	print("Escala e translacao:")
 	print(t)
 	return t
 
 def produzir_imagem(img, t, largura, altura):
+	'''
+	Gera a imagem usando a imagem original e a transformacao necessaria.
+	'''
 	novaImg = zeros((largura, altura, 3), dtype=uint8)
 	t_inversa = inv(t)
 	for y in range(altura):
@@ -207,17 +231,11 @@ def produzir_imagem(img, t, largura, altura):
 			[xO, yO, _] = normalizar(dot(t_inversa, array([x,y,1])))
 			if ((xO >= 0) and (xO < columns) and (yO >= 0) and (yO < rows)):
 				novaImg[x, y, :] = img[int(xO), int(yO), :]
-				# novaImg[x, y, 0] = img[int(xO), int(yO), 0]
-				# novaImg[x, y, 1] = img[int(xO), int(yO), 1]
-				# novaImg[x, y, 2] = img[int(xO), int(yO), 2]
-			# if (x == 0 and y == 0):
-				# print(img[int(xO), int(yO)])
-				# print(novaImg[x, y])
 	return novaImg
 
 nomeImg = askopenfilename(filetypes=[("all files","*"),("Bitmap Files","*.bmp; *.dib"), ("JPEG", "*.jpg; *.jpe; *.jpeg; *.jfif"), ("PNG", "*.png"), ("TIFF", "*.tiff; *.tif")])
 nomeImg = nomeImg[nomeImg.find("/Imagens/") + 1:]
-print(nomeImg)
+print("Imagem selecionada:", nomeImg)
 img = imread(nomeImg)
 img = ajustar_imagem(img)
 (columns, rows, _) = img.shape
@@ -228,10 +246,15 @@ while (1):
 	print("3 - Retificacao com dois pares de retas paralelas")
 	print("4 - Retificacao com dois pares de retas ortogonais")
 	print("5 - Retificacao com cinco pares de retas ortogonais")
-	print("0 - Sair")
+	print("0 - Escolher nova imagem")
 	opcao = int(input())
 	if opcao == 0:
-		break
+		nomeImg = askopenfilename(filetypes=[("all files","*"),("Bitmap Files","*.bmp; *.dib"), ("JPEG", "*.jpg; *.jpe; *.jpeg; *.jfif"), ("PNG", "*.png"), ("TIFF", "*.tiff; *.tif")])
+		nomeImg = nomeImg[nomeImg.find("/Imagens/") + 1:]
+		print("Imagem selecionada:", nomeImg)
+		img = imread(nomeImg)
+		img = ajustar_imagem(img)
+		(columns, rows, _) = img.shape
 	else:
 		img = transposta(img)
 		if opcao == 1:
@@ -359,3 +382,16 @@ while (1):
 		imshow("Nova imagem", transposta(novaImg))
 		waitKey(0)
 		destroyAllWindows()
+		while(1):
+			print("Deseja salvar a imagem:")
+			print("1 - Sim")
+			print("2 - Nao")
+			opcao = int(input())
+			if (opcao == 1):
+				imwrite(nomeImg[:-4] + "_retificado.png", novaImg)
+				print("Imagem salva como: " + nomeImg[:-4] + "_retificado.png")
+				break
+			elif (opcao == 2):
+				break
+			else:
+				print("Opcao invalida")
